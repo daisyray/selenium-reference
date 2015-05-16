@@ -21,6 +21,7 @@ import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.testng.Assert.*;
 
@@ -46,7 +47,7 @@ public class MiscSeleniumTest {
         this.driver.close();
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void hasLoginButton() throws InterruptedException {
         this.driver.get(TMC_URL);
         Thread.sleep(5*1000L);
@@ -68,7 +69,7 @@ public class MiscSeleniumTest {
         assertEquals(image.getWidth(), 256);
     }
 
-    @Test(dependsOnMethods = {"hasLoginButton"}, enabled = false)
+    @Test(dependsOnMethods = {"hasLoginButton"}, enabled = true)
     public void loginButtonBringsUpDialog() {
         this.driver.get(TMC_URL);
         WebElement button = this.driver.findElement(By.id("login_opener"));
@@ -96,7 +97,7 @@ public class MiscSeleniumTest {
         assertEquals(form.getAttribute("action"), "https://www.tmcbonds.com/login/");
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void newsAndEventsOnHomePageIsNotEmpty() {
         this.navigateToIFrame("mybcontainer_iframe", By.id("smoothmenu1"));
         List<WebElement> contentHeaders = this.driver.findElements(By.className("welcome-content-header"));
@@ -136,7 +137,23 @@ public class MiscSeleniumTest {
         downloadLink.click();
         this.sleep(5);
         // check if file is present
+        Path pdf = this.findFirstPdf(downloads);
+        assertNotNull(pdf);
+        assertTrue(Files.size(pdf) > 0);
+    }
 
+    private Path findFirstPdf(Path directory) throws Exception {
+        final AtomicReference<Path> pdf = new AtomicReference<>();
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (file.getFileName().toString().endsWith(".pdf")) {
+                    pdf.set(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return pdf.get();
     }
 
     private void deleteAllFilesInDirectory(Path directory) throws Exception {
