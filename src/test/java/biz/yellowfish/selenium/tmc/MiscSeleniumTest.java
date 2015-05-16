@@ -1,9 +1,13 @@
 package biz.yellowfish.selenium.tmc;
 
+import com.sun.jna.platform.win32.WinNT;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.annotations.AfterClass;
@@ -12,8 +16,11 @@ import org.testng.annotations.Test;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.net.URL;
-import java.util.List;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.*;
 
 import static org.testng.Assert.*;
 
@@ -23,8 +30,15 @@ public class MiscSeleniumTest {
     private WebDriver driver;
     @BeforeClass
     public void beforeClass() {
-        System.setProperty("webdriver.chrome.driver", "/Users/traveler/projects/chromedriver");
-        this.driver =  new ChromeDriver(); // new RemoteWebDriver(new URL("http://localhost:9515"), DesiredCapabilities.chrome());
+        System.setProperty("webdriver.chrome.driver", "./lib/chromedriver");
+        Map<String,Object> prefs = new HashMap<>();
+        prefs.put("profile.default_content_settings.popups", 0);
+        prefs.put("download.default_directory", "./downloads");
+        ChromeOptions options = new ChromeOptions();
+        options.setExperimentalOption("prefs", prefs);
+        DesiredCapabilities capabilities = DesiredCapabilities.chrome();
+        capabilities.setCapability(ChromeOptions.CAPABILITY, options);
+        this.driver =  new ChromeDriver(capabilities); // new RemoteWebDriver(new URL("http://localhost:9515"), DesiredCapabilities.chrome());
     }
 
     @AfterClass
@@ -32,7 +46,7 @@ public class MiscSeleniumTest {
         this.driver.close();
     }
 
-    @Test
+    @Test(enabled = false)
     public void hasLoginButton() throws InterruptedException {
         this.driver.get(TMC_URL);
         Thread.sleep(5*1000L);
@@ -54,7 +68,7 @@ public class MiscSeleniumTest {
         assertEquals(image.getWidth(), 256);
     }
 
-    @Test(dependsOnMethods = {"hasLoginButton"}, enabled = true)
+    @Test(dependsOnMethods = {"hasLoginButton"}, enabled = false)
     public void loginButtonBringsUpDialog() {
         this.driver.get(TMC_URL);
         WebElement button = this.driver.findElement(By.id("login_opener"));
@@ -93,18 +107,52 @@ public class MiscSeleniumTest {
         List<WebElement> list = ul.findElements(By.tagName("li"));
         assertNotNull(list);
         assertTrue(list.size() > 0);
-        String text = list.get(0).findElement(By.tagName("span")).getText();
-        assertTrue(text.length() > 0);
     }
 
-    @Test(enabled = false)
-    public void testDownloadFile() {
+    @Test(enabled = true)
+    public void testDownloadFile() throws Exception {
         this.navigateToIFrame("mybcontainer_iframe", By.id("smoothmenu1"));
-        WebElement newsLink = this.driver.findElement(By.cssSelector("div#smoothmenu1 > ul > li:nth-child(5) > ul > li:first-child > a"));
+        WebElement newsCommentaryLink = this.driver.findElement(By.cssSelector("div#smoothmenu1 > ul > li:nth-child(5) > a"));
+        Actions actions = new Actions(this.driver);
+        actions.moveToElement(newsCommentaryLink);
+        actions.build().perform();
+
+        WebElement newsLink = newsCommentaryLink.findElement(By.xpath("../ul/li[1]/a"));
         newsLink.click();
         WebDriverWait wait = new WebDriverWait(driver, 10);
         wait.until(ExpectedConditions.presenceOfElementLocated(By.id("iframe_content")));
-        this.navigateToIFrame("iframe_content", By.className("title-text"));
+        this.sleep(5);
+        WebElement frame = this.driver.findElement(By.id("iframe_content"));
+        this.driver.get(frame.getAttribute("src"));
+        this.sleep(5);
+        wait = new WebDriverWait(driver, 10);
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.className("title-text")));
+        List<WebElement> downloadLinks = driver.findElements(By.linkText("Click Here"));
+        assertTrue(downloadLinks.size() > 0);
+        WebElement downloadLink = downloadLinks.get(1);
+        assertNotNull(downloadLink);
+        Path downloads = Paths.get(".", "downloads");
+        this.deleteAllFilesInDirectory(downloads);
+        downloadLink.click();
+        this.sleep(5);
+        // check if file is present
+
+    }
+
+    private void deleteAllFilesInDirectory(Path directory) throws Exception {
+        final Set<Path> toDelete = new HashSet<>();
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (Files.isRegularFile(file)) {
+                    toDelete.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        for (Path del : toDelete) {
+            Files.delete(del);
+        }
     }
 
     private void navigateToIFrame(String iframeId, By anchorElement) {
@@ -112,11 +160,21 @@ public class MiscSeleniumTest {
         WebDriverWait wait = new WebDriverWait(driver, 10);
         By frameBy = By.id(iframeId);
         wait.until(ExpectedConditions.presenceOfElementLocated(frameBy));
+        this.sleep(5);
         WebElement frame = this.driver.findElement(frameBy);
         String href = frame.getAttribute("src");
         System.out.println("IFRAME URL: "+ href);
         this.driver.get(href);
+        wait = new WebDriverWait(driver, 10);
         wait.until(ExpectedConditions.presenceOfElementLocated(anchorElement));
+    }
+
+    private void sleep(int sec) {
+        try {
+            Thread.sleep(sec*1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
