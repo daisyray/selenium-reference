@@ -30,7 +30,7 @@ public class MiscSeleniumTest {
     private WebDriver driver;
     @BeforeClass
     public void beforeClass() {
-        System.setProperty("webdriver.chrome.driver", "./lib/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "./lib/chromedriver.linux");
         Map<String,Object> prefs = new HashMap<>();
         prefs.put("profile.default_content_settings.popups", 0);
         prefs.put("download.default_directory", "./downloads");
@@ -46,7 +46,7 @@ public class MiscSeleniumTest {
         this.driver.close();
     }
 
-    @Test(enabled = true)
+    @Test(enabled = false)
     public void hasLoginButton() throws InterruptedException {
         this.driver.get(TMC_URL);
         Thread.sleep(5*1000L);
@@ -68,7 +68,7 @@ public class MiscSeleniumTest {
         assertEquals(image.getWidth(), 256);
     }
 
-    @Test(dependsOnMethods = {"hasLoginButton"}, enabled = true)
+    @Test(dependsOnMethods = {"hasLoginButton"}, enabled = false)
     public void loginButtonBringsUpDialog() {
         this.driver.get(TMC_URL);
         WebElement button = this.driver.findElement(By.id("login_opener"));
@@ -96,7 +96,7 @@ public class MiscSeleniumTest {
         assertEquals(form.getAttribute("action"), "https://www.tmcbonds.com/login/");
     }
 
-    @Test(enabled = true)
+    @Test(enabled = false)
     public void newsAndEventsOnHomePageIsNotEmpty() {
         this.navigateToIFrame("mybcontainer_iframe", By.id("smoothmenu1"));
         List<WebElement> contentHeaders = this.driver.findElements(By.className("welcome-content-header"));
@@ -160,7 +160,7 @@ public class MiscSeleniumTest {
         Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if (Files.isRegularFile(file)) {
+                if (Files.isRegularFile(file) && !file.getFileName().toString().endsWith("do-not-delete")) {
                     toDelete.add(file);
                 }
                 return FileVisitResult.CONTINUE;
