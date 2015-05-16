@@ -1,6 +1,5 @@
 package biz.yellowfish.selenium.tmc;
 
-import com.sun.jna.platform.win32.WinNT;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
